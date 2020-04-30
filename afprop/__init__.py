@@ -1,1 +1,2 @@
-from .Afprop import aprop_vec
+from .Afprop import afprop
+from .Afprop_vec import afprop_vec

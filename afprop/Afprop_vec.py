@@ -1,4 +1,3 @@
-# Archived code for unvectorized version for speed comparison
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -7,32 +6,22 @@ import logging
 
 
 def calc_similarity_matrix(mydata, num_cluster_pref=1):
+    """compute pairwise negative euclidean distance"""
     neg_euc_dist = -cdist(mydata, mydata, "euclidean") ** 2
     pref = np.min(neg_euc_dist) if num_cluster_pref == 1 else np.median(neg_euc_dist)
     np.fill_diagonal(neg_euc_dist, pref)
     return neg_euc_dist
 
 
-def init_r_array(num_data_pts, s_matrix):
-
-    # compute r(i,k) values for iteration 0
-
-    max_matrix = np.zeros(num_data_pts * num_data_pts).reshape(
-        (num_data_pts, num_data_pts)
-    )
-    for i in range(num_data_pts):
-        for k in range(num_data_pts):
-            s_matrix_mask = np.ma.array(s_matrix, mask=False)
-            s_matrix_mask.mask[i, k] = True
-            max_matrix[i, k] = np.max(s_matrix_mask[i, :])
-    r_array_0 = s_matrix - max_matrix
+def init_r_array(s_matrix):
+    """compute responsibility matrix for iteration 0"""
+    r_array_0 = s_matrix - (s_matrix).max(axis=1)[:, None]
     return r_array_0
 
 
 def a_array_update(num_data_pts, niter, r_array, damp_c, a_array):
 
     # update a(i,k) values for iteration #niter
-
     for i in range(num_data_pts):
         for k in range(num_data_pts):
             if i != k:
@@ -63,10 +52,9 @@ def a_array_update(num_data_pts, niter, r_array, damp_c, a_array):
 def r_array_update(num_data_pts, niter, a_array, s_matrix, damp_c, r_array):
 
     # update a(i,k) values for iteration #niter
-
+    s_a_array_sum = a_array[niter] + s_matrix
     for i in range(num_data_pts):
         for k in range(num_data_pts):
-            s_a_array_sum = a_array[niter] + s_matrix
             s_a_array_sum_mask = np.ma.array(s_a_array_sum, mask=False)
             s_a_array_sum_mask.mask[:, k] = True
             s_a_array_sum_max = np.max(s_a_array_sum_mask[i, :])
@@ -77,7 +65,10 @@ def r_array_update(num_data_pts, niter, a_array, s_matrix, damp_c, r_array):
     return r_array[niter]
 
 
-def afprop(mydata, num_cluster_pref=1, iterations=100, damp_c=0.5, num_stable_iters=10):
+def afprop_vec(
+    mydata, num_cluster_pref=1, iterations=100, damp_c=0.5, num_stable_iters=10
+):
+    # convert pd to np array
     # convert pd to np array
     if isinstance(mydata, pd.DataFrame):
         mydata = mydata.values
@@ -111,12 +102,10 @@ def afprop(mydata, num_cluster_pref=1, iterations=100, damp_c=0.5, num_stable_it
     )
 
     # initialize r_array
-    r_array = np.zeros(num_data_pts * num_data_pts * (iterations)).reshape(
-        (iterations, num_data_pts, num_data_pts)
-    )
+    r_array = np.zeros((iterations, num_data_pts, num_data_pts))
 
     # fill in r_array values for 0th iteration
-    r_array[0] = init_r_array(num_data_pts, s_matrix)
+    r_array[0] = init_r_array(s_matrix)
 
     ### iterative loop for iterations 1+
 

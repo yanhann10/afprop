@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import pytest
-from afprop import aprop_vec
+from afprop import afprop_vec
 
 
 # sample data with clusters for testing
@@ -13,34 +13,26 @@ df = pd.DataFrame(mydata)
 
 def test_n_cluster():
     # test n_cluster equals #unique cluster labels
-    clusters, exemplars, cluster_plot, num_clusters, final_iter = aprop_vec(
+    clusters, exemplars, cluster_plot, num_clusters, final_iter = afprop_vec(
         mydata=mydata
     )
     assert len(set(clusters)) == num_clusters
-    #assert num_clusters == 2
-
-
-# def test_valid_input():
-#     # test input need to have 2 columns
-#     with pytest.raises(ValueError):
-#         aprop_vec(mydata=np.random.rand(8, 3))
-#     # assert str(e.value) == "S must have two columns."
+    assert num_clusters == 2
 
 
 def test_cluster_pref():
     # test valid specification of cluster preference
-    pytest.raises(ValueError):
-        aprop_vec(mydata=np.random.rand(8, 2), num_cluster_pref=0)
-    # assert (
-    #     str(e.value) == "Enter valid indication (1 or 2) of cluster number preference."
-    # )
+    with pytest.raises(ValueError):
+        afprop_vec(mydata=np.random.rand(8, 2), num_cluster_pref=0)
 
 
 def test_valid_damping():
     # test valid specification of cluster preference
-    pytest.raises(ValueError):
-        aprop_vec(mydata=np.random.rand(8, 2), damp_c=2)
-    # assert str(e.value) == "Enter a valid damping constant."
+    with pytest.raises(ValueError):
+        afprop_vec(mydata=np.random.rand(8, 2), damp_c=2)
 
 
-# test pd df is valid input
+def test_df_input():
+    # test pd df is valid input
+    clusters, exemplars, cluster_plot, num_clusters, final_iter = afprop_vec(mydata=df)
+    assert num_clusters == 2

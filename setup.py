@@ -1,16 +1,16 @@
 from setuptools import setup
 
 
-def readme():
-    with open("README.md") as f:
-        return f.read()
+# def readme():
+#     with open("README.md") as f:
+#         return f.read()
 
 
 setup(
     name="afprop",
-    version="0.0",
+    version="0.1.5",
     description="Affinity Propagation",
-    long_description=readme(),
+    # long_description=readme(),
     packages=["afprop"],
     keywords="clustering",
     license="MIT",
