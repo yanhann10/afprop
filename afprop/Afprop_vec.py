@@ -5,12 +5,6 @@ import pandas as pd
 import cython
 from numba import jit
 
-# simulated data to use for clustering
-C1 = np.random.multivariate_normal(mean=[0, 0], cov=np.eye(2), size=30)
-C2 = np.random.multivariate_normal(mean=[4, 4], cov=np.eye(2), size=30)
-mydata = np.r_[C1, C2]
-df = pd.DataFrame(mydata)
-
 
 def calc_similarity_matrix(mydata, num_cluster_pref=1):
     neg_euc_dist = -cdist(mydata, mydata, "euclidean") ** 2
@@ -69,6 +63,21 @@ def a_array_update(num_data_pts, niter, r_array, damp_c, a_array):
     return a_array[niter]
 
 
+def make_cluster_plot(mydata, r_s_sum_array, is_center):
+    if mydata.shape[1] == 2:
+        plt.scatter(
+            mydata[:, 0], mydata[:, 1], c=np.argmax(r_s_sum_array, axis=1), s=200,
+        )
+        plt.scatter(
+            mydata[:, 0][is_center],
+            mydata[:, 1][is_center],
+            marker="+",
+            s=350,
+            c="black",
+        )
+        plt.show()
+
+
 def afprop_vec(
     mydata, num_cluster_pref=1, iterations=100, damp_c=0.5, num_stable_iters=10
 ):
@@ -124,12 +133,6 @@ def afprop_vec(
         clusters = np.argmax(
             r_s_sum_array, axis=1
         )  # the list points grouped by their assigned center
-        centers = np.where(
-            np.argmax(r_s_sum_array, axis=1) == np.array(range(num_data_pts))
-        )  # the points that are centers
-        is_center = np.argmax(r_s_sum_array, axis=1) == np.array(
-            range(num_data_pts)
-        )  # true if pt is a center, false otherwise
 
         # record whether this iteration's clustering is the same as in previous iteration
         if np.array_equal(clusters, clusters_prev):
@@ -143,26 +146,22 @@ def afprop_vec(
         if niter > num_stable_iters and np.all(
             iter_stability[niter - num_stable_iters : niter] == 1
         ):
+
+            centers = np.where(
+                np.argmax(r_s_sum_array, axis=1) == np.array(range(num_data_pts))
+            )  # the points that are centers
+            is_center = np.argmax(r_s_sum_array, axis=1) == np.array(
+                range(num_data_pts)
+            )  # true if pt is a center, false otherwise
+
             exemplars = centers[0]
             num_clusters = len(np.unique(clusters))
             final_iter = niter + 1
+
             # if data is 2D, print scatter plot
             if mydata.shape[1] == 2:
-                plt.scatter(
-                    mydata[:, 0],
-                    mydata[:, 1],
-                    c=np.argmax(r_s_sum_array, axis=1),
-                    s=200,
-                )
-                plt.scatter(
-                    mydata[:, 0][is_center],
-                    mydata[:, 1][is_center],
-                    marker="+",
-                    s=350,
-                    c="black",
-                )
-                cluster_plot = plt.show()
-                return cluster_plot, clusters, exemplars, num_clusters, final_iter
+                make_cluster_plot(mydata, r_s_sum_array, is_center)
+                return clusters, exemplars, num_clusters, final_iter
             else:
                 return clusters, exemplars, num_clusters, final_iter
             break
