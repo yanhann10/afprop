@@ -15,14 +15,14 @@ def calc_similarity_matrix(mydata, num_cluster_pref=1):
 
 def init_r_array(s_matrix):
     """compute responsibility matrix for iteration 0"""
-    r_array_0 = pd.DataFrame(s_matrix - (s_matrix).max(axis=1)[:, None])
+    r_array_0 = s_matrix - (s_matrix).max(axis=1)[:, None]
     return r_array_0
 
 
-def a_array_update(num_data_pts, niter, r_array, damp_c, a_array):
+def a_array_update(niter, r_array, damp_c, a_array):
 
     # update a(i,k) values for iteration #niter
-
+    num_data_pts = r_array.shape[0]
     for i in range(num_data_pts):
         for k in range(num_data_pts):
             if i != k:
@@ -50,19 +50,11 @@ def a_array_update(num_data_pts, niter, r_array, damp_c, a_array):
     return a_array[niter]
 
 
-def r_array_update(num_data_pts, niter, a_array, s_matrix, damp_c, r_array):
-    # update a(i,k) values for iteration #niter
-
-    for i in range(num_data_pts):
-        for k in range(num_data_pts):
-            s_a_array_sum = a_array[niter] + s_matrix
-            s_a_array_sum_mask = np.ma.array(s_a_array_sum, mask=False)
-            s_a_array_sum_mask.mask[:, k] = True
-            s_a_array_sum_max = np.max(s_a_array_sum_mask[i, :])
-            update_term = s_matrix[i, k] - s_a_array_sum_max
-            r_array[niter, i, k] = (
-                damp_c * update_term + (1 - damp_c) * r_array[niter - 1, i, k]
-            )
+def r_array_update(niter, a_array, s_matrix, damp_c, r_array):
+    """update responsibility matrix for iteration #niter"""
+    s_a_array_sum = a_array[niter] + s_matrix
+    update_term = s_matrix - (s_a_array_sum).max(axis=1)[:, None]
+    r_array[niter] = damp_c * update_term + (1 - damp_c) * r_array[niter - 1]
     return r_array[niter]
 
 
@@ -107,7 +99,7 @@ def aprop_vec(
     )
 
     # fill in r_array values for 0th iteration
-    r_array[0] = init_r_array(num_data_pts, s_matrix)
+    r_array[0] = init_r_array(s_matrix)
 
     ### iterative loop for iterations 1+
 
@@ -118,10 +110,8 @@ def aprop_vec(
     for niter in range(1, iterations):
 
         # update a and r arrays at each iteration
-        a_array[niter] = a_array_update(num_data_pts, niter, r_array, damp_c, a_array)
-        r_array[niter] = r_array_update(
-            num_data_pts, niter, a_array, s_matrix, damp_c, r_array
-        )
+        a_array[niter] = a_array_update(niter, r_array, damp_c, a_array)
+        r_array[niter] = r_array_update(niter, a_array, s_matrix, damp_c, r_array)
 
         r_s_sum_array = r_array[niter] + a_array[niter]
 
