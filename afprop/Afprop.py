@@ -6,25 +6,16 @@ import logging
 
 
 def calc_similarity_matrix(mydata, num_cluster_pref=1):
+    """compute pairwise negative euclidean distance"""
     neg_euc_dist = -cdist(mydata, mydata, "euclidean") ** 2
     pref = np.min(neg_euc_dist) if num_cluster_pref == 1 else np.median(neg_euc_dist)
     np.fill_diagonal(neg_euc_dist, pref)
     return neg_euc_dist
 
 
-def init_r_array(num_data_pts, s_matrix):
-
-    # compute r(i,k) values for iteration 0
-
-    max_matrix = np.zeros(num_data_pts * num_data_pts).reshape(
-        (num_data_pts, num_data_pts)
-    )
-    for i in range(num_data_pts):
-        for k in range(num_data_pts):
-            s_matrix_mask = np.ma.array(s_matrix, mask=False)
-            s_matrix_mask.mask[i, k] = True
-            max_matrix[i, k] = np.max(s_matrix_mask[i, :])
-    r_array_0 = s_matrix - max_matrix
+def init_r_array(s_matrix):
+    """compute responsibility matrix for iteration 0"""
+    r_array_0 = pd.DataFrame(s_matrix - (s_matrix).max(axis=1)[:, None])
     return r_array_0
 
 
@@ -60,7 +51,6 @@ def a_array_update(num_data_pts, niter, r_array, damp_c, a_array):
 
 
 def r_array_update(num_data_pts, niter, a_array, s_matrix, damp_c, r_array):
-
     # update a(i,k) values for iteration #niter
 
     for i in range(num_data_pts):
