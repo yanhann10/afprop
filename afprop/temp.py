@@ -1,18 +1,12 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import cdist
-import pandas as pd
-import cython
-from numba import jit
-
-# simulated data to use for clustering
-C1 = np.random.multivariate_normal(mean=[0, 0], cov=np.eye(2), size=30)
-C2 = np.random.multivariate_normal(mean=[4, 4], cov=np.eye(2), size=30)
-mydata = np.r_[C1, C2]
-df = pd.DataFrame(mydata)
+import logging
 
 
 def calc_similarity_matrix(mydata, num_cluster_pref=1):
+    """compute pairwise negative euclidean distance"""
     neg_euc_dist = -cdist(mydata, mydata, "euclidean") ** 2
     pref = np.min(neg_euc_dist) if num_cluster_pref == 1 else np.median(neg_euc_dist)
     np.fill_diagonal(neg_euc_dist, pref)
@@ -20,22 +14,11 @@ def calc_similarity_matrix(mydata, num_cluster_pref=1):
 
 
 def init_r_array(s_matrix):
-    """compute responsibility matrix for iteration 0"""
+
+    # compute r(i,k) values for iteration 0
+
     r_array_0 = s_matrix - (s_matrix).max(axis=1)[:, None]
     return r_array_0
-
-
-def r_array_update(niter, a_array, s_matrix, damp_c, r_array):
-    """compute responsibility matrix for iteration #niter"""
-    s_a_array_sum = a_array[niter] + s_matrix
-    n = s_a_array_sum.shape[1]
-    row_max = np.zeros((n, n))
-    rng = np.arange(n)
-    for i in rng:
-        row_max[:, i] = np.amax(s_a_array_sum[:, rng != i], axis=1)
-    update_term = s_matrix - row_max
-    r_array[niter] = damp_c * update_term + (1 - damp_c) * r_array[niter - 1]
-    return r_array[niter]
 
 
 def a_array_update(num_data_pts, niter, r_array, damp_c, a_array):
@@ -69,10 +52,27 @@ def a_array_update(num_data_pts, niter, r_array, damp_c, a_array):
     return a_array[niter]
 
 
-def afprop_vec(
+def r_array_update(num_data_pts, niter, a_array, s_matrix, damp_c, r_array):
+
+    # update a(i,k) values for iteration #niter
+    s_a_array_sum = a_array[niter] + s_matrix
+
+    for i in range(num_data_pts):
+        for k in range(num_data_pts):
+            s_a_array_sum_mask = np.ma.array(s_a_array_sum, mask=False)
+            s_a_array_sum_mask.mask[:, k] = True
+            s_a_array_sum_max = np.max(s_a_array_sum_mask[i, :])
+            update_term = s_matrix[i, k] - s_a_array_sum_max
+            r_array[niter, i, k] = (
+                damp_c * update_term + (1 - damp_c) * r_array[niter - 1, i, k]
+            )
+    return r_array[niter]
+
+
+def afprop_vec2(
     mydata, num_cluster_pref=1, iterations=100, damp_c=0.5, num_stable_iters=10
 ):
-    # convert pd to np array
+    # if input is pandas data frame, convert to numpy array
     if isinstance(mydata, pd.DataFrame):
         mydata = mydata.values
 
@@ -95,28 +95,40 @@ def afprop_vec(
     # count number of data points, IE number rows in mydata
     num_data_pts = mydata.shape[0]
 
-    s_matrix = calc_similarity_matrix(mydata, num_cluster_pref=1)
+    # matrix of all the poitwise distances as measured by the metric s
+    s_metric_matrix = create_s_metric_matrix(mydata, num_data_pts)
+
+    # same as the above except diagonal entries (IE self-preferences) are set to special values
+    # depending on num_cluster_pref
+    s_matrix = create_s_matrix(mydata, num_data_pts, num_cluster_pref, s_metric_matrix)
 
     # initialize a_array: a(i,k) = 0 at 0th iteration
-    a_array = np.zeros((iterations, num_data_pts, num_data_pts))
+    a_array = np.zeros(num_data_pts * num_data_pts * (iterations)).reshape(
+        (iterations, num_data_pts, num_data_pts)
+    )
 
     # initialize r_array
-    r_array = np.zeros((iterations, num_data_pts, num_data_pts))
+    r_array = np.zeros(num_data_pts * num_data_pts * (iterations)).reshape(
+        (iterations, num_data_pts, num_data_pts)
+    )
 
     # fill in r_array values for 0th iteration
-    r_array[0] = init_r_array(s_matrix)
+    r_array[0] = init_r_array(num_data_pts, s_matrix)
 
     ### iterative loop for iterations 1+
 
     # define tracker variables for checking for stability
     clusters_prev = np.zeros(num_data_pts)
+    clusters_prev_2 = np.zeros(num_data_pts)
     iter_stability = np.zeros(iterations)
 
     for niter in range(1, iterations):
 
         # update a and r arrays at each iteration
         a_array[niter] = a_array_update(num_data_pts, niter, r_array, damp_c, a_array)
-        r_array[niter] = r_array_update(niter, a_array, s_matrix, damp_c, r_array)
+        r_array[niter] = r_array_update(
+            num_data_pts, niter, a_array, s_matrix, damp_c, r_array
+        )
 
         r_s_sum_array = r_array[niter] + a_array[niter]
 
@@ -134,8 +146,6 @@ def afprop_vec(
         # record whether this iteration's clustering is the same as in previous iteration
         if np.array_equal(clusters, clusters_prev):
             iter_stability[niter] = 1
-
-        clusters_prev = clusters
 
         # if you have seen enough identical clusterings in a row,
         # create a scatterplot illustrating the results
@@ -171,3 +181,6 @@ def afprop_vec(
         # just print a message
         elif niter == iterations - 1:
             print("Stability not acheived. Consider reducing num_stable_iters.")
+
+        # track the previous cluster, for checking stability in next iteration
+        clusters_prev = clusters

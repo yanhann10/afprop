@@ -4,6 +4,17 @@ afprop is a Python package for clustering using affinity propagation, a method b
 
 🚧WORK IN PROGRESS
 
+## Installation
+
+```
+pip install -i https://test.pypi.org/simple/ afprop
+from afprop import afprop_vec
+```
+
+## Attributes
+
+Works on multidimensional array and numerical dataframe
+
 ### Reference
 
 Frey, Brendan J., and Delbert Dueck. “Clustering by Passing Messages Between Data Points.” Science 315, no. 5814 (February 16, 2007): 972. https://doi.org/10.1126/science.1136800.
