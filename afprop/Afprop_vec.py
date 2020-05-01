@@ -33,9 +33,7 @@ def r_array_update(niter, a_array, s_matrix, damp_c, r_array):
 
 
 def a_array_update(num_data_pts, niter, r_array, damp_c, a_array):
-
-    # update a(i,k) values for iteration #niter
-
+    """compute availiability for iteration #niter"""
     for i in range(num_data_pts):
         for k in range(num_data_pts):
             if i != k:
@@ -64,6 +62,7 @@ def a_array_update(num_data_pts, niter, r_array, damp_c, a_array):
 
 
 def make_cluster_plot(mydata, r_s_sum_array, is_center):
+    """scatter plot of clusters with centers labeled"""
     if mydata.shape[1] == 2:
         plt.scatter(
             mydata[:, 0], mydata[:, 1], c=np.argmax(r_s_sum_array, axis=1), s=200,
@@ -81,11 +80,14 @@ def make_cluster_plot(mydata, r_s_sum_array, is_center):
 def afprop_vec(
     mydata, num_cluster_pref=1, iterations=100, damp_c=0.5, num_stable_iters=10
 ):
+    """main clustering function"""
     # convert pd to np array
     if isinstance(mydata, pd.DataFrame):
         mydata = mydata.values
 
     # data input error messages
+    if mydata.shape[1] != 2:
+        raise ValueError("S must have two columns.")
     if num_cluster_pref != 1 and num_cluster_pref != 2:
         raise ValueError(
             "Enter valid indication (1 or 2) of cluster number preference."
@@ -107,7 +109,9 @@ def afprop_vec(
     s_matrix = calc_similarity_matrix(mydata, num_cluster_pref=1)
 
     # initialize a_array: a(i,k) = 0 at 0th iteration
-    a_array = np.zeros((iterations, num_data_pts, num_data_pts))
+    a_array = np.zeros(num_data_pts * num_data_pts * (iterations)).reshape(
+        (iterations, num_data_pts, num_data_pts)
+    )
 
     # initialize r_array
     r_array = np.zeros((iterations, num_data_pts, num_data_pts))
@@ -125,14 +129,20 @@ def afprop_vec(
 
         # update a and r arrays at each iteration
         a_array[niter] = a_array_update(num_data_pts, niter, r_array, damp_c, a_array)
+        # r_array[niter] = r_array_update(num_data_pts, niter, a_array, s_matrix, damp_c, r_array)
         r_array[niter] = r_array_update(niter, a_array, s_matrix, damp_c, r_array)
-
         r_s_sum_array = r_array[niter] + a_array[niter]
 
         # results of each iteration's clustering attempt
         clusters = np.argmax(
             r_s_sum_array, axis=1
         )  # the list points grouped by their assigned center
+        centers = np.where(
+            np.argmax(r_s_sum_array, axis=1) == np.array(range(num_data_pts))
+        )  # the points that are centers
+        is_center = np.argmax(r_s_sum_array, axis=1) == np.array(
+            range(num_data_pts)
+        )  # true if pt is a center, false otherwise
 
         # record whether this iteration's clustering is the same as in previous iteration
         if np.array_equal(clusters, clusters_prev):

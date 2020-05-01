@@ -2,8 +2,6 @@
 
 afprop is a Python package for clustering using affinity propagation, a method based on real-valued message exchange between data points until clusters emerge. Unlike KMeans, it does not require pre-specifying the number of clusters.
 
-🚧WORK IN PROGRESS
-
 ## Installation
 
 ```

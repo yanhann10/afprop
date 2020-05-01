@@ -8,7 +8,7 @@ from setuptools import setup
 
 setup(
     name="afprop",
-    version="0.1.8",
+    version="0.1.8.2",
     description="Affinity Propagation",
     # long_description=readme(),
     packages=["afprop"],
