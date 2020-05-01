@@ -9,9 +9,17 @@ pip install -i https://test.pypi.org/simple/ afprop
 from afprop import afprop_vec
 ```
 
-## Attributes
+## Usage
 
-Works on multidimensional array and numerical dataframe
+```
+clusters, exemplars, num_clusters, final_iter = afprop_vec(data)
+```
+
+Input
+: 2-dimensional or multi-dimensional array and numerical dataframe
+
+Output
+: cluster labels, exemplars (cluster centers) and final iterations
 
 ### Reference
 

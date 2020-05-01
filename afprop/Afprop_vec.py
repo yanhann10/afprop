@@ -80,7 +80,60 @@ def make_cluster_plot(mydata, r_s_sum_array, is_center):
 def afprop_vec(
     mydata, num_cluster_pref=1, iterations=100, damp_c=0.5, num_stable_iters=10
 ):
-    """main clustering function"""
+    """
+    Perform clustering by affinity propagation
+    
+    Parameters
+    ----------
+    
+    mydata : array-like, shape (num_data_pts, 2)
+        Data set for clustering.
+        
+    num_cluster_pref : int (1 or 2), optional, default: 1
+        Indication of whether the input similarities are set to the minimum similarity measure 
+        (IE, negative squared Euclidean distance) between the data points (num_cluster_pref = 1), 
+        or the median similarity measure (num_cluster_pref = 2).
+        
+    iterations : int, optional, default: 100
+        Maximum number of iterations to run affinity propagation.
+    
+    damp_c : float, optional, default: 0.5
+        Damping constant. The weight given to the updating iteration; between 0 and 1.
+        
+    num_stable_iters : int, optional, default: 10
+        The algorithm stops if the clusterings at each iteration have remained unchanged for 
+        this many iterations in a row.
+        
+       
+    Returns
+    -------
+    
+    clusters : array, shape (num_data_pts, 1)
+        For the index of each data point, gives that data point's exemplar.
+    
+    exemplars : array, shape(num_exemplars, 1)
+        List the indices of the data points that are exemplars.
+    
+    cluster_plot : figure
+        Scatter plot of the data, with points in the same cluster hacing the same color, and
+        exemplars marked with plus-signs.
+        
+    num_clusters : int
+        Number of clusters in final clustering.
+        
+    final_iter : int
+        Number of iterations that were run before the algorithm stopped.
+        
+        
+    Notes
+    -----
+    
+    Input preferences should be set to the minimum similarity measure when a small number of clusters
+    is preferred, and to the median similarity measure when a moderate number of clusters is 
+    preferred.
+    
+    If stability is not acheived, the aglorithm does not output the returned objects but 
+    rather prints an error message: "Stability not acheived. Consider reducing num_stable_iters.""""
     # convert pd to np array
     if isinstance(mydata, pd.DataFrame):
         mydata = mydata.values
