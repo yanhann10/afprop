@@ -8,7 +8,7 @@ def readme():
 
 setup(
     name="afprop",
-    version="0.1.8.4",
+    version="0.1.8.5",
     description="Affinity Propagation",
     long_description=readme(),
     packages=["afprop"],
